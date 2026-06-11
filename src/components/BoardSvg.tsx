@@ -17,6 +17,8 @@ import { BOARD_UNITS, BoardLayout, CELL, cellCenter, LadderGeom, Point, SnakeCur
 import { theme } from '../theme';
 
 const AnimatedG = Animated.createAnimatedComponent(G);
+const AnimatedPath = Animated.createAnimatedComponent(Path);
+const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 // ---------------------------------------------------------------------------
 // Realistic snakes: tapered filled body with python blotches + a head whose jaw
@@ -46,12 +48,26 @@ function bodyWidth(t: number): number {
   return 2.5;
 }
 
+interface TailGeom {
+  /** spine points of the tail stretch */
+  x: number[];
+  y: number[];
+  /** unit perpendicular at each point (direction the bend displaces along) */
+  px: number[];
+  py: number[];
+  /** body half-width at each point */
+  w: number[];
+  /** bend factor: 0 at the body junction -> 1 at the tip, so the tail flexes
+      like part of the body instead of swinging rigidly on a pivot */
+  f: number[];
+}
+
 interface Outline {
   bodyPath: string;
-  /** last stretch of the body, drawn separately so it can wag */
+  /** rest-pose tail path (used for the static contact shadow) */
   tailPath: string;
-  /** point the tail rotates around */
-  tailPivot: Point;
+  /** per-sample geometry the animated tail path is rebuilt from each frame */
+  tailGeom: TailGeom;
   /** spine polyline up to the tail split (for stripes that must not cover the wagging tail) */
   spinePath: string;
   blotches: { p: Point; angle: number; w: number }[];
@@ -101,17 +117,35 @@ function buildOutline(pts: Point[]): Outline {
     }
   }
 
-  // tail = last ~18% of the spine. It pivots at the EDGE of the body overlap so
-  // the visible seam never opens, and its hidden under-body samples are slimmed
-  // so they cannot peek out sideways while swinging.
+  // tail = last ~18% of the spine. The animated tail BENDS: each sample is
+  // displaced along its perpendicular by a factor that ramps from 0 at the
+  // body junction to 1 at the tip — flesh flexing, not a piece on a hinge.
   const split = Math.floor(n * 0.82);
   const cover = Math.min(split + 2, n - 1);
+  const tailGeom: TailGeom = { x: [], y: [], px: [], py: [], w: [], f: [] };
+  for (let i = split; i < n; i++) {
+    const prev = pts[Math.max(0, i - 1)];
+    const next = pts[Math.min(n - 1, i + 1)];
+    let tx = next.x - prev.x;
+    let ty = next.y - prev.y;
+    const tl = Math.sqrt(tx * tx + ty * ty) || 1;
+    tx /= tl;
+    ty /= tl;
+    tailGeom.x.push(pts[i].x);
+    tailGeom.y.push(pts[i].y);
+    tailGeom.px.push(-ty);
+    tailGeom.py.push(tx);
+    tailGeom.w.push(bodyWidth(i / (n - 1)));
+    // rigid while still under the body (seamless joint), then ease toward the tip
+    tailGeom.f.push(i <= cover ? 0 : Math.pow((i - cover) / Math.max(1, n - 1 - cover), 1.4));
+  }
+
   let spinePath = `M ${pts[0].x.toFixed(1)} ${pts[0].y.toFixed(1)}`;
   for (let i = 1; i <= split; i++) spinePath += ` L ${pts[i].x.toFixed(1)} ${pts[i].y.toFixed(1)}`;
   return {
     bodyPath: closedPath(0, cover, () => 1),
-    tailPath: closedPath(split, n - 1, (i) => (i >= cover ? 1 : i === split ? 0.55 : 0.8)),
-    tailPivot: pts[cover],
+    tailPath: closedPath(split, n - 1, () => 1),
+    tailGeom,
     spinePath,
     blotches,
     spine: pts,
@@ -203,7 +237,8 @@ function RealSnake({ curve, index, open }: { curve: SnakeCurve; index: number; o
   const outline = React.useMemo(() => buildOutline(curve.samples), [curve]);
   const gid = `snakeskin${index}`;
 
-  // perpetual tail wag
+  // perpetual tail wag: the tail path is rebuilt every frame with a bend that
+  // grows from zero at the body junction to full swing at the tip
   const wag = useSharedValue(0);
   React.useEffect(() => {
     const dur = 800 + (index % 4) * 110;
@@ -213,15 +248,41 @@ function RealSnake({ curve, index, open }: { curve: SnakeCurve; index: number; o
       true,
     );
   }, [wag, index]);
-  const pivot = outline.tailPivot;
-  const tailProps = useAnimatedProps(() => ({
-    transform: `rotate(${(wag.value * 7).toFixed(2)} ${pivot.x.toFixed(1)} ${pivot.y.toFixed(1)})`,
+  const geom = outline.tailGeom;
+  const swing = 11 + (index % 3) * 2; // tip amplitude in board units
+  const tailProps = useAnimatedProps(() => {
+    const a = wag.value * swing;
+    const m = geom.x.length;
+    let leftSide = '';
+    let rightSide = '';
+    for (let i = 0; i < m; i++) {
+      const bx = geom.x[i] + geom.px[i] * geom.f[i] * a;
+      const by = geom.y[i] + geom.py[i] * geom.f[i] * a;
+      const ox = geom.px[i] * geom.w[i];
+      const oy = geom.py[i] * geom.w[i];
+      leftSide += ` L ${(bx + ox).toFixed(1)} ${(by + oy).toFixed(1)}`;
+      rightSide = ` L ${(bx - ox).toFixed(1)} ${(by - oy).toFixed(1)}` + rightSide;
+    }
+    return { d: 'M' + leftSide.slice(2) + rightSide + ' Z' };
+  });
+  const last = geom.x.length - 1;
+  const tipProps = useAnimatedProps(() => ({
+    cx: geom.x[last] + geom.px[last] * wag.value * swing,
+    cy: geom.y[last] + geom.py[last] * wag.value * swing,
   }));
 
   return (
     <G>
       <Defs>
-        <SvgLinearGradient id={gid} x1="0" y1="0" x2="1" y2="1">
+        {/* user-space gradient so body and tail shade continuously across the seam */}
+        <SvgLinearGradient
+          id={gid}
+          gradientUnits="userSpaceOnUse"
+          x1={curve.head.x}
+          y1={curve.head.y}
+          x2={curve.tail.x}
+          y2={curve.tail.y}
+        >
           <Stop offset="0" stopColor={skin.base} />
           <Stop offset="1" stopColor={skin.shade} />
         </SvgLinearGradient>
@@ -231,11 +292,9 @@ function RealSnake({ curve, index, open }: { curve: SnakeCurve; index: number; o
         <Path d={outline.bodyPath} fill="rgba(40,20,5,0.30)" />
         <Path d={outline.tailPath} fill="rgba(40,20,5,0.30)" />
       </G>
-      {/* wagging tail (behind body so the seam hides) */}
-      <AnimatedG animatedProps={tailProps}>
-        <Path d={outline.tailPath} fill={`url(#${gid})`} stroke={skin.shade} strokeWidth={1.5} />
-        <Circle cx={curve.tail.x} cy={curve.tail.y} r={4} fill={skin.shade} />
-      </AnimatedG>
+      {/* wagging tail: path morphs each frame, bending like part of the body */}
+      <AnimatedPath animatedProps={tailProps} fill={`url(#${gid})`} stroke={skin.shade} strokeWidth={1.5} />
+      <AnimatedCircle animatedProps={tipProps} r={4} fill={skin.shade} />
       {/* body */}
       <Path d={outline.bodyPath} fill={`url(#${gid})`} stroke={skin.shade} strokeWidth={1.5} />
       {/* belly stripe along spine */}
