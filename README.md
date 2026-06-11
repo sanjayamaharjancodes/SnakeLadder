@@ -38,6 +38,10 @@ pawns) is drawn in code with SVG and animated with Reanimated; there are no imag
   - Ladder climb with rung-by-rung bobbing
   - Capture knock-back flight, bouncing turn arrow, pulsing crown on square 100,
     slithering snakes on the home screen, confetti + figurine victory sequence
+- **Sound effects, synthesized from code** (no recorded assets): wooden dice clatter,
+  per-square hop ticks, snake hiss + gulp, rising ladder chime, capture thud, win
+  fanfare, and a "need a 6" buzz — regenerate them with `node scripts/make-sfx.js`;
+  🔊/🔇 toggle in the lobby
 - Reserved **advertisement banner slot** (56dp) on menu and game screens, ready for
   `react-native-google-mobile-ads`
 - Haptic feedback on native (dice, bites, climbs, captures, victory)
@@ -84,6 +88,8 @@ src/components/Token.tsx         # hero token (hop/swallow/climb/knock/celebrate
 src/components/Confetti.tsx      # confetti + floating orbs
 src/components/MenuSnakes.tsx    # slithering home-screen snakes
 src/components/WoodBackground.tsx# plank/grain texture
+src/audio.ts                     # sfx manager (expo-audio player pools, mute)
+scripts/make-sfx.js              # synthesizes assets/sfx/*.wav from code
 src/components/AdBanner.tsx      # reserved ad slot
 src/components/Weather.tsx       # rain / snow / night overlays, dynamic sky
 src/components/WinOverlay.tsx

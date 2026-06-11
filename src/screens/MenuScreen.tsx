@@ -17,6 +17,7 @@ import { FloatingOrbs } from '../components/Confetti';
 import { MenuSnakes } from '../components/MenuSnakes';
 import { WoodBackground } from '../components/WoodBackground';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { playSfx, setSoundEnabled } from '../audio';
 import { NightOverlay, TimeSetting, useResolvedTime, WeatherSetting } from '../components/Weather';
 import { Hero, HEROES } from '../game/heroes';
 import { theme } from '../theme';
@@ -36,6 +37,8 @@ export interface GameSetup {
   time: TimeSetting;
   /** house rule: a token needs a 6 to leave home */
   sixToStart: boolean;
+  /** sound effects on/off */
+  sound: boolean;
 }
 
 interface Props {
@@ -134,6 +137,7 @@ export function MenuScreen({ onStart, initial }: Props) {
   const [weather, setWeather] = useState<WeatherSetting>(initial?.weather ?? 'random');
   const [time, setTime] = useState<TimeSetting>(initial?.time ?? 'auto');
   const [sixToStart, setSixToStart] = useState(initial?.sixToStart ?? false);
+  const [sound, setSound] = useState(initial?.sound ?? true);
   const resolvedTime = useResolvedTime(time);
   const insets = useSafeAreaInsets();
   // roster in turn order: tap a hero to join/leave, tap their badge to flip CPU/human
@@ -164,7 +168,8 @@ export function MenuScreen({ onStart, initial }: Props) {
 
   const start = () => {
     if (!canPlay) return;
-    onStart({ slots, randomBoard, weather, time, sixToStart });
+    playSfx('tap');
+    onStart({ slots, randomBoard, weather, time, sixToStart, sound });
   };
 
   return (
@@ -241,11 +246,26 @@ export function MenuScreen({ onStart, initial }: Props) {
             </View>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 16 }}>
               <Text style={styles.cardLabel}>RULES</Text>
-              <Pressable onPress={() => setSixToStart((v) => !v)} style={[styles.modeBtn, sixToStart && styles.modeActive]}>
-                <Text style={[styles.modeText, sixToStart && { color: theme.onAccent }]}>
-                  🎲 6 TO START {sixToStart ? '· ON' : '· OFF'}
-                </Text>
-              </Pressable>
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                <Pressable onPress={() => setSixToStart((v) => !v)} style={[styles.modeBtn, sixToStart && styles.modeActive]}>
+                  <Text style={[styles.modeText, sixToStart && { color: theme.onAccent }]}>
+                    🎲 6 TO START {sixToStart ? '· ON' : '· OFF'}
+                  </Text>
+                </Pressable>
+                <Pressable
+                  onPress={() =>
+                    setSound((v) => {
+                      const next = !v;
+                      setSoundEnabled(next);
+                      if (next) playSfx('tap');
+                      return next;
+                    })
+                  }
+                  style={[styles.modeBtn, sound && styles.modeActive]}
+                >
+                  <Text style={[styles.modeText, sound && { color: theme.onAccent }]}>{sound ? '🔊 ON' : '🔇 OFF'}</Text>
+                </Pressable>
+              </View>
             </View>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 16 }}>
               <Text style={styles.cardLabel}>TIME</Text>

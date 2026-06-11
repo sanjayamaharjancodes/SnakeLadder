@@ -18,6 +18,7 @@ import { Dice3D, DiceHandle } from '../components/Dice3D';
 import { FloatingOrbs } from '../components/Confetti';
 import { Token, TokenHandle } from '../components/Token';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { playSfx, setSoundEnabled } from '../audio';
 import { DynamicWeather, NightOverlay, useResolvedTime } from '../components/Weather';
 import { WinOverlay } from '../components/WinOverlay';
 import { BOARD_UNITS, BoardLayout, cellCenter, CLASSIC_LAYOUT, ladderSamples, makeRandomLayout, Point } from '../game/board';
@@ -66,6 +67,10 @@ export function GameScreen({ setup, onExit }: Props) {
   const toPx = useCallback((u: number) => (u + FRAME) * unitScale, [unitScale]);
   const tokenSize = Math.max(26, boardPx / 11.5);
   const resolvedTime = useResolvedTime(setup.time);
+
+  useEffect(() => {
+    setSoundEnabled(setup.sound);
+  }, [setup.sound]);
 
   const heroes: Hero[] = setup.slots.map((s) => heroById(s.heroId));
 
@@ -170,6 +175,7 @@ export function GameScreen({ setup, onExit }: Props) {
     const mover = playersRef.current[currentRef.current];
     const value = rollDice();
     haptic('light');
+    playSfx('dice');
     await diceRef.current?.roll(value);
     haptic('medium');
 
@@ -182,14 +188,17 @@ export function GameScreen({ setup, onExit }: Props) {
       if (step.kind === 'blocked') {
         say(`Rolled ${value} — need exactly ${100 - mover.pos} to win!`);
         haptic('error');
+        playSfx('locked');
         await sleep(900);
       } else if (step.kind === 'locked') {
         say(`${mover.name} rolled ${value} — needs a 6 to start!`);
         haptic('error');
+        playSfx('locked');
         await sleep(900);
       } else if (step.kind === 'hop' && step.cells) {
         say(`${mover.name} rolled ${value}`);
         for (const cell of step.cells) {
+          playSfx('hop');
           await token?.hop(cellPoint(cell, mover.id));
         }
       } else if (step.kind === 'snake' && step.to !== undefined) {
@@ -197,6 +206,7 @@ export function GameScreen({ setup, onExit }: Props) {
         if (match) {
           say('🐍 CHOMP! Swallowed whole...');
           haptic('heavy');
+          playSfx('snake');
           // jaws snap open and hold while the hero is gulped down...
           setEating(landed);
           await sleep(550);
@@ -210,6 +220,7 @@ export function GameScreen({ setup, onExit }: Props) {
       } else if (step.kind === 'ladder' && step.to !== undefined) {
         say('🪜 Ladder! Climbing up...');
         haptic('success');
+        playSfx('ladder');
         await sleep(300);
         const geom = layoutRef.current.ladders.find((g) => g.from === landed);
         if (geom) {
@@ -219,6 +230,7 @@ export function GameScreen({ setup, onExit }: Props) {
         const victim = playersRef.current.find((p) => p.id === step.victimId)!;
         say(`💥 ${victim.name} got bumped home!`);
         haptic('heavy');
+        playSfx('capture');
         await tokenRefs.current[victim.id]?.knockHome(dockPoint(victim.id));
         victim.pos = 0;
       }
@@ -230,6 +242,7 @@ export function GameScreen({ setup, onExit }: Props) {
     if (won) {
       setPhaseBoth('won');
       haptic('success');
+      playSfx('win');
       token?.celebrate();
       say(`🏆 ${mover.name} wins!`);
       await sleep(700);
