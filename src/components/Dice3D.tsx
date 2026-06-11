@@ -77,7 +77,9 @@ function neighbours(front: number): { top: number; left: number } {
 }
 
 function IsoCube({ value, size }: { value: number; size: number }) {
-  const { top, left } = neighbours(value);
+  // the ROLLED value reads on the TOP face — that's the face people read on an
+  // isometric die; the sides get valid adjacent faces (opposites sum to 7)
+  const { top: leftFace, left: rightFace } = neighbours(value);
   return (
     <Svg width={size * 1.45} height={size * 1.45} viewBox="0 0 120 120">
       <Defs>
@@ -103,9 +105,9 @@ function IsoCube({ value, size }: { value: number; size: number }) {
       {/* soft edge light: top bevel catches the light, vertical edge in shade */}
       <Path d="M 22 34 L 60 56 L 98 34" fill="none" stroke="rgba(255,220,160,0.45)" strokeWidth={2.4} strokeLinecap="round" />
       <Path d="M 60 56 L 60 100" fill="none" stroke="rgba(43,23,8,0.30)" strokeWidth={2.2} strokeLinecap="round" />
-      <FacePips value={top} face="top" />
-      <FacePips value={left} face="left" />
-      <FacePips value={value} face="right" />
+      <FacePips value={value} face="top" />
+      <FacePips value={leftFace} face="left" />
+      <FacePips value={rightFace} face="right" />
     </Svg>
   );
 }
