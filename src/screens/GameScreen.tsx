@@ -17,7 +17,8 @@ import { WoodBackground } from '../components/WoodBackground';
 import { Dice3D, DiceHandle } from '../components/Dice3D';
 import { FloatingOrbs } from '../components/Confetti';
 import { Token, TokenHandle } from '../components/Token';
-import { DynamicWeather, NightOverlay } from '../components/Weather';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { DynamicWeather, NightOverlay, useResolvedTime } from '../components/Weather';
 import { WinOverlay } from '../components/WinOverlay';
 import { BOARD_UNITS, BoardLayout, cellCenter, CLASSIC_LAYOUT, ladderSamples, makeRandomLayout, Point } from '../game/board';
 import { Hero, heroById } from '../game/heroes';
@@ -53,16 +54,18 @@ interface Props {
 
 export function GameScreen({ setup, onExit }: Props) {
   const { width, height } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
   // bottom row hosts home dock + dice side by side; board takes ALL remaining height
   const ROW_H = 102;
   const diceSize = 54;
-  // chrome: top padding + bar + chips + bottom row + ad slot + margins
-  const boardPx = Math.min(width - 8, height - (44 + 30 + 32 + ROW_H + 56 + 10));
+  // chrome: safe areas + top padding + bar + chips + bottom row + ad slot + margins
+  const boardPx = Math.min(width - 8, height - (insets.top + insets.bottom + 14 + 30 + 32 + ROW_H + 56 + 10));
   const dockW = boardPx - diceSize * 1.6 - 10;
   // board px per viewBox unit; viewBox spans the frame too
   const unitScale = boardPx / (BOARD_UNITS + FRAME * 2);
   const toPx = useCallback((u: number) => (u + FRAME) * unitScale, [unitScale]);
   const tokenSize = Math.max(26, boardPx / 11.5);
+  const resolvedTime = useResolvedTime(setup.time);
 
   const heroes: Hero[] = setup.slots.map((s) => heroById(s.heroId));
 
@@ -283,7 +286,7 @@ export function GameScreen({ setup, onExit }: Props) {
     <LinearGradient colors={[theme.bgTop, theme.bgMid, theme.bgBottom]} style={{ flex: 1 }}>
       <WoodBackground />
       <FloatingOrbs count={6} />
-      <View style={{ flex: 1, alignItems: 'center', paddingTop: 44 }}>
+      <View style={{ flex: 1, alignItems: 'center', paddingTop: insets.top + 14, paddingBottom: insets.bottom }}>
         {/* top bar */}
         <View style={{ flexDirection: 'row', width: '100%', paddingHorizontal: 12, alignItems: 'center' }}>
           <Pressable onPress={onExit} style={styles.exitBtn}>
@@ -317,9 +320,7 @@ export function GameScreen({ setup, onExit }: Props) {
         {/* board + tokens + bottom row (home dock | dice) */}
         <View style={{ width: boardPx, height: boardPx + ROW_H, marginTop: 6 }}>
           <BoardSvg size={boardPx} layout={layout} eating={eating} />
-          <View style={[styles.dock, { top: boardPx + 4, width: dockW, height: ROW_H - 8 }]}>
-            <Text style={{ fontSize: 13, opacity: 0.55 }}>🏠</Text>
-          </View>
+          <View style={[styles.dock, { top: boardPx + 4, width: dockW, height: ROW_H - 8 }]} />
           <View style={{ position: 'absolute', top: boardPx - 2, right: 0, alignItems: 'center' }}>
             <Animated.View
               pointerEvents="none"
@@ -361,7 +362,7 @@ export function GameScreen({ setup, onExit }: Props) {
         <AdBanner flexible />
       </View>
 
-      {setup.time === 'night' && <NightOverlay />}
+      {resolvedTime === 'night' && <NightOverlay />}
       <DynamicWeather setting={setup.weather} />
 
       {winner && (

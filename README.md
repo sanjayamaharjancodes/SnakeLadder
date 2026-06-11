@@ -7,14 +7,22 @@ pawns) is drawn in code with SVG and animated with Reanimated; there are no imag
 ## Features
 
 - 2–**6** players, **VS CPU** or local **Pass & Play**
-- **Hero roster**: 8 manga-chibi figurines (ninja, shonen fighter, magical girl, samurai,
-  witch, archer, monk, rival swordsman) — tap a hero to add them to the game (selected
-  heroes = players), and tap the 👤/🤖 badge under each to flip them between human and CPU
-- **Board options**: Classic fixed layout, or **Shuffle** — random snake/ladder positions
-  regenerated every game, with segment-distance checks so transitions never overlap visually
+- **Hero roster**: 16 manga-chibi figurines — ninja, shonen fighter, magical girl,
+  samurai, witch, archer, monk, rival swordsman, plus myth & tale heroes (Herc, valkyrie
+  Freya, wizard Merlin, Jinn, fox-spirit Kitsu, Robin, Wukong the Monkey King, mermaid
+  Naia). Tap a hero to add them to the game (selected heroes = players), and tap the
+  👤/🤖 badge under each to flip them between human and CPU
+- **Board options**: **Shuffle** (default) — random snake/ladder positions regenerated
+  every game. Candidates are rejected against the *actual drawn geometry* (wavy snake
+  spines, ladder rails), so bodies never cross or crowd each other — or the Classic
+  fixed layout
 - **Weather & time**: clear, gentle rain, or light snow — pick one, or 🔀 random, which
   drifts between skies every 30–45 s during the game with a soft cross-fade; plus a
-  **day/night** setting (night adds a moonlit tint, twinkling stars, and a glowing moon)
+  **day/night** setting (night adds a moonlit tint, twinkling stars, and a glowing moon —
+  on the home screen too). 🌗 **Auto** follows your real sky: it uses your location for
+  local sunrise/sunset (falling back to the device clock if permission is denied)
+- **Safe-area aware**: lays out around notches and the Android navigation bar
+  (SDK 56 edge-to-edge), so the play button and ad slot are never cut off
 - **Living board**: snakes wag their tails and flick their tongues while idle;
   lobby remembers your last setup
 - Classic rules: exact roll to land on 100, roll a 6 for an extra turn, land on an

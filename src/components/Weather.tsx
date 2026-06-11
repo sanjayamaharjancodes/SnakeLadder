@@ -1,5 +1,7 @@
 import React, { useMemo } from 'react';
 import { StyleSheet, useWindowDimensions, View } from 'react-native';
+import * as Location from 'expo-location';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
   Easing,
   useAnimatedStyle,
@@ -11,12 +13,91 @@ import Animated, {
 
 export type WeatherKind = 'clear' | 'rain' | 'snow';
 export type WeatherSetting = WeatherKind | 'random';
-export type TimeSetting = 'day' | 'night';
+export type TimeSetting = 'day' | 'night' | 'auto';
 
 export function resolveWeather(setting: WeatherSetting): WeatherKind {
   if (setting !== 'random') return setting;
   const all: WeatherKind[] = ['clear', 'rain', 'snow'];
   return all[Math.floor(Math.random() * all.length)];
+}
+
+/** Sunrise/sunset for a date and place (compact NOAA-style approximation). */
+function sunTimes(date: Date, lat: number, lng: number): { sunrise: Date; sunset: Date } | null {
+  const rad = Math.PI / 180;
+  const dayMs = 86400000;
+  const J1970 = 2440588;
+  const J2000 = 2451545;
+  const toJulian = (d: Date) => d.valueOf() / dayMs - 0.5 + J1970;
+  const fromJulian = (j: number) => new Date((j + 0.5 - J1970) * dayMs);
+
+  const lw = rad * -lng;
+  const phi = rad * lat;
+  const n = Math.round(toJulian(date) - J2000 - 0.0009 - lw / (2 * Math.PI));
+  const ds = J2000 + 0.0009 + lw / (2 * Math.PI) + n;
+  const M = rad * (357.5291 + 0.98560028 * (ds - J2000));
+  const C = rad * (1.9148 * Math.sin(M) + 0.02 * Math.sin(2 * M) + 0.0003 * Math.sin(3 * M));
+  const L = M + C + rad * 102.9372 + Math.PI;
+  const dec = Math.asin(Math.sin(L) * Math.sin(rad * 23.4397));
+  const Jtransit = ds + 0.0053 * Math.sin(M) - 0.0069 * Math.sin(2 * L);
+  // sun centre 0.833 deg below the horizon = visual sunrise/sunset
+  const cosH = (Math.sin(rad * -0.833) - Math.sin(phi) * Math.sin(dec)) / (Math.cos(phi) * Math.cos(dec));
+  if (cosH < -1 || cosH > 1) return null; // polar day / polar night
+  const H = Math.acos(cosH);
+  const Jset = Jtransit + H / (2 * Math.PI);
+  const Jrise = Jtransit - H / (2 * Math.PI);
+  return { sunrise: fromJulian(Jrise), sunset: fromJulian(Jset) };
+}
+
+function clockFallback(): 'day' | 'night' {
+  const h = new Date().getHours();
+  return h >= 6 && h < 18 ? 'day' : 'night';
+}
+
+/**
+ * Resolves the day/night setting. 'auto' follows the real sky: it asks for the
+ * device location once and uses local sunrise/sunset; if permission is denied
+ * (or location is unavailable) it falls back to the device clock (6:00-18:00 =
+ * day). Re-evaluated every few minutes so dusk/dawn happens during play.
+ */
+export function useResolvedTime(setting: TimeSetting): 'day' | 'night' {
+  const [auto, setAuto] = React.useState<'day' | 'night'>(clockFallback);
+  const coords = React.useRef<{ lat: number; lng: number } | null>(null);
+
+  React.useEffect(() => {
+    if (setting !== 'auto') return;
+    let active = true;
+
+    const evaluate = () => {
+      const now = new Date();
+      const sun = coords.current && sunTimes(now, coords.current.lat, coords.current.lng);
+      const next = sun ? (now >= sun.sunrise && now < sun.sunset ? 'day' : 'night') : clockFallback();
+      if (active) setAuto(next);
+    };
+
+    evaluate();
+    (async () => {
+      try {
+        const { status } = await Location.requestForegroundPermissionsAsync();
+        if (status !== 'granted') return;
+        const pos =
+          (await Location.getLastKnownPositionAsync()) ??
+          (await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Lowest }));
+        if (pos) {
+          coords.current = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+          evaluate();
+        }
+      } catch {
+        // stay on the clock fallback
+      }
+    })();
+    const id = setInterval(evaluate, 5 * 60 * 1000);
+    return () => {
+      active = false;
+      clearInterval(id);
+    };
+  }, [setting]);
+
+  return setting === 'auto' ? auto : setting;
 }
 
 function RainDrop({ index }: { index: number }) {
@@ -174,8 +255,9 @@ function Star({ index }: { index: number }) {
   );
 }
 
-/** Night: a soft moonlit tint, twinkling stars, and a faint crescent moon. */
+/** Night: a soft moonlit tint, twinkling stars, and a faint glowing moon. */
 export function NightOverlay() {
+  const insets = useSafeAreaInsets();
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFill}>
       <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(8,12,40,0.30)' }]} />
@@ -186,7 +268,7 @@ export function NightOverlay() {
       <View
         style={{
           position: 'absolute',
-          top: 14,
+          top: insets.top + 12,
           right: 18,
           width: 26,
           height: 26,

@@ -130,6 +130,32 @@ function BehindHair({ hero }: { hero: Hero }) {
           <Path d="M 79 35 Q 86 70 78 92 Q 70 84 70 60 Z" fill={hero.hairShade} />
         </G>
       );
+    case 'winged-helm':
+      return (
+        <G>
+          <Path d="M 22 38 Q 15 66 23 88 Q 31 80 30 58 Z" fill={hero.hair} />
+          <Path d="M 78 38 Q 85 66 77 88 Q 69 80 70 58 Z" fill={hero.hair} />
+        </G>
+      );
+    case 'fox-ears':
+      // fluffy fox tail with a white tip
+      return (
+        <G>
+          <Path d="M 66 80 Q 94 72 90 96 Q 84 108 66 98 Z" fill={hero.accent} />
+          <Path d="M 84 88 Q 92 88 90 96 Q 86 102 78 100 Q 84 96 84 88 Z" fill="#FFF7ED" />
+        </G>
+      );
+    case 'monkey-king':
+      // thin curling tail
+      return <Path d="M 64 94 Q 90 100 88 80 Q 87 70 78 73" stroke={hero.hair} strokeWidth="5" fill="none" strokeLinecap="round" />;
+    case 'mermaid':
+      // long wavy sea-hair
+      return (
+        <G>
+          <Path d="M 20 34 Q 8 56 16 74 Q 8 86 20 96 Q 30 88 28 58 Z" fill={hero.hairShade} />
+          <Path d="M 80 34 Q 92 56 84 74 Q 92 86 80 96 Q 70 88 72 58 Z" fill={hero.hairShade} />
+        </G>
+      );
     default:
       return null;
   }
@@ -211,6 +237,103 @@ function FrontHair({ hero }: { hero: Hero }) {
         <G>
           <Path d="M 21 46 Q 16 14 50 12 Q 84 14 79 46 Q 74 26 62 24 Q 66 32 56 30 Q 58 22 50 20 Q 42 22 44 30 Q 34 32 38 24 Q 26 26 21 46 Z" fill={hero.hair} />
           <Path d="M 21 46 Q 18 24 36 18 Q 26 28 28 42 Z" fill={hero.hairShade} opacity="0.45" />
+        </G>
+      );
+    case 'laurel':
+      // short curls crowned with a golden laurel wreath
+      return (
+        <G>
+          <Path d="M 22 44 Q 20 16 50 13 Q 80 16 78 44 Q 70 26 50 25 Q 30 26 22 44 Z" fill={hero.hair} />
+          <Circle cx="34" cy="19" r="5" fill={hero.hair} />
+          <Circle cx="50" cy="15" r="5.5" fill={hero.hair} />
+          <Circle cx="66" cy="19" r="5" fill={hero.hair} />
+          <Ellipse cx="27" cy="34" rx="4.5" ry="2.2" fill={hero.accent} transform="rotate(-34 27 34)" />
+          <Ellipse cx="34" cy="29" rx="4.5" ry="2.2" fill={hero.accent} transform="rotate(-22 34 29)" />
+          <Ellipse cx="42" cy="26" rx="4.5" ry="2.2" fill={hero.accent} transform="rotate(-10 42 26)" />
+          <Ellipse cx="73" cy="34" rx="4.5" ry="2.2" fill={hero.accent} transform="rotate(34 73 34)" />
+          <Ellipse cx="66" cy="29" rx="4.5" ry="2.2" fill={hero.accent} transform="rotate(22 66 29)" />
+          <Ellipse cx="58" cy="26" rx="4.5" ry="2.2" fill={hero.accent} transform="rotate(10 58 26)" />
+        </G>
+      );
+    case 'winged-helm':
+      // silver valkyrie helm with white side-wings and a gold crest
+      return (
+        <G>
+          <Path d="M 21 42 Q 20 12 50 10 Q 80 12 79 42 Q 70 23 50 22 Q 30 23 21 42 Z" fill="#CBD5E1" />
+          <Path d="M 21 42 Q 26 26 44 23 Q 30 24 24 36 Z" fill="#94A3B8" opacity="0.8" />
+          <Path d="M 47 10 L 53 10 L 52 23 L 48 23 Z" fill={hero.accent} />
+          <Path d="M 24 36 Q 6 30 2 12 Q 16 17 26 26 Q 22 30 24 36 Z" fill="#F8FAFC" stroke="#CBD5E1" strokeWidth="1.5" />
+          <Path d="M 76 36 Q 94 30 98 12 Q 84 17 74 26 Q 78 30 76 36 Z" fill="#F8FAFC" stroke="#CBD5E1" strokeWidth="1.5" />
+        </G>
+      );
+    case 'wizard':
+      // starry pointed hat + grand white beard
+      return (
+        <G>
+          <Path d="M 28 54 Q 30 86 50 88 Q 70 86 72 54 Q 64 67 50 67 Q 36 67 28 54 Z" fill={hero.hair} />
+          <Path d="M 36 58 Q 43 53 49 58 M 51 58 Q 57 53 64 58" stroke={hero.hairShade} strokeWidth="3" fill="none" strokeLinecap="round" />
+          <Ellipse cx="50" cy="21" rx="33" ry="7" fill={hero.outfitShade} />
+          <Path d="M 70 21 Q 62 -10 32 -2 Q 48 2 52 21 Z" fill={hero.outfit} />
+          <Path d="M 38 4 l 1.8 3.6 4 .5 -2.9 2.8 .7 4 -3.6-1.9 -3.6 1.9 .7-4 -2.9-2.8 4-.5 Z" fill={hero.accent} />
+          <Circle cx="56" cy="12" r="2.2" fill={hero.accent} />
+        </G>
+      );
+    case 'turban':
+      // wrapped turban with a jewel and plume
+      return (
+        <G>
+          <Path d="M 22 38 Q 20 6 50 5 Q 80 6 78 38 Q 64 23 50 23 Q 36 23 22 38 Z" fill={hero.outfit} />
+          <Path d="M 24 31 Q 50 15 76 31" stroke={hero.outfitShade} strokeWidth="4" fill="none" />
+          <Path d="M 28 22 Q 50 9 72 22" stroke={hero.outfitShade} strokeWidth="3.4" fill="none" />
+          <Path d="M 50 9 Q 45 -4 54 -7 Q 57 1 53 9 Z" fill={hero.accent} opacity="0.95" />
+          <Circle cx="50" cy="15" r="5" fill={hero.accent} stroke="#FFF7ED" strokeWidth="1.4" />
+        </G>
+      );
+    case 'fox-ears':
+      // snowy hair with orange fox ears
+      return (
+        <G>
+          <Path d="M 20 50 Q 16 16 50 12 Q 84 16 80 50 Q 74 30 50 27 Q 26 30 20 50 Z" fill={hero.hair} />
+          <Path d="M 20 50 Q 18 26 34 19 Q 26 30 27 44 Z" fill={hero.hairShade} opacity="0.6" />
+          <Path d="M 27 22 L 17 -4 L 43 13 Z" fill={hero.accent} />
+          <Path d="M 28 17 L 23 4 L 37 12 Z" fill="#FFF1E6" />
+          <Path d="M 73 22 L 83 -4 L 57 13 Z" fill={hero.accent} />
+          <Path d="M 72 17 L 77 4 L 63 12 Z" fill="#FFF1E6" />
+        </G>
+      );
+    case 'feather-cap':
+      // slanted woodsman cap with a red feather
+      return (
+        <G>
+          <Path d="M 22 42 Q 22 18 50 15 Q 78 18 78 42 Q 68 28 50 27 Q 32 28 22 42 Z" fill={hero.hair} />
+          <Path d="M 18 34 Q 24 6 58 9 Q 84 14 82 30 Q 60 17 30 25 Q 22 28 18 34 Z" fill={hero.outfit} />
+          <Path d="M 18 34 Q 46 22 82 30 L 82 35 Q 50 27 18 38 Z" fill={hero.outfitShade} />
+          <Path d="M 68 9 Q 82 -8 92 -2 Q 86 9 72 14 Z" fill={hero.accent} />
+          <Path d="M 70 12 Q 80 2 90 -1" stroke="#7F1D1D" strokeWidth="1.4" fill="none" />
+        </G>
+      );
+    case 'monkey-king':
+      // soft tufty hair bound by the golden circlet
+      return (
+        <G>
+          <Path d="M 21 44 Q 20 18 50 14 Q 80 18 79 44 Q 70 26 50 25 Q 30 26 21 44 Z" fill={hero.hair} />
+          <Circle cx="36" cy="17" r="5" fill={hero.hair} />
+          <Circle cx="50" cy="13" r="5.5" fill={hero.hair} />
+          <Circle cx="64" cy="17" r="5" fill={hero.hair} />
+          <Path d="M 24 33 Q 50 20 76 33" stroke={hero.accent} strokeWidth="5" fill="none" strokeLinecap="round" />
+          <Circle cx="50" cy="25" r="3.6" fill={hero.accent} />
+        </G>
+      );
+    case 'mermaid':
+      // wavy sea-hair with a pearl band and a starfish clip
+      return (
+        <G>
+          <Path d="M 20 48 Q 14 14 50 11 Q 86 14 80 48 Q 76 30 66 28 Q 70 20 58 22 Q 60 16 50 17 Q 40 16 42 22 Q 30 20 34 28 Q 24 30 20 48 Z" fill={hero.hair} />
+          <Path d="M 20 48 Q 17 26 34 19 Q 25 30 27 44 Z" fill={hero.hairShade} opacity="0.5" />
+          <Circle cx="40" cy="17" r="2.2" fill="#FFF7ED" />
+          <Circle cx="50" cy="14.5" r="2.2" fill="#FFF7ED" />
+          <Circle cx="60" cy="17" r="2.2" fill="#FFF7ED" />
+          <Path d="M 70 18 l 1.9 4 4.3 .4 -3.2 2.9 1 4.2 -4 -2.3 -4 2.3 1 -4.2 -3.2 -2.9 4.3 -.4 Z" fill={hero.accent} stroke="#F472B6" strokeWidth="0.8" />
         </G>
       );
     default:

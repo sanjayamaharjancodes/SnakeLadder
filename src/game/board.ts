@@ -197,6 +197,9 @@ function cellDistance(a: number, b: number): number {
  * A fresh random board: 8 snakes + 7 ladders.
  * Constraints: every transition endpoint is unique (no chains, no shared cells),
  * cells 1 and 100 stay clear, and each snake/ladder spans enough distance to draw well.
+ * Overlap rejection runs against the ACTUAL drawn geometry (the snake's wavy spine,
+ * the ladder's rail line), not just the straight head->tail axis — so bodies never
+ * cross or squeeze against each other.
  */
 function pointToSegDist(p: Point, a: Point, b: Point): number {
   const abx = b.x - a.x;
@@ -211,41 +214,47 @@ function segmentsCross(a: Point, b: Point, c: Point, d: Point): boolean {
   return o(a, b, c) !== o(a, b, d) && o(c, d, a) !== o(c, d, b);
 }
 
-/** Min distance between two segments (0 when they intersect). */
-function segDist(a: Point, b: Point, c: Point, d: Point): number {
-  if (segmentsCross(a, b, c, d)) return 0;
-  return Math.min(pointToSegDist(a, c, d), pointToSegDist(b, c, d), pointToSegDist(c, a, b), pointToSegDist(d, a, b));
+/** Min distance between two polylines (0 when any segments intersect). */
+function polylineDist(a: Point[], b: Point[]): number {
+  for (let i = 0; i < a.length - 1; i++) {
+    for (let j = 0; j < b.length - 1; j++) {
+      if (segmentsCross(a[i], a[i + 1], b[j], b[j + 1])) return 0;
+    }
+  }
+  let min = Infinity;
+  for (const p of a) for (let j = 0; j < b.length - 1; j++) min = Math.min(min, pointToSegDist(p, b[j], b[j + 1]));
+  for (const p of b) for (let i = 0; i < a.length - 1; i++) min = Math.min(min, pointToSegDist(p, a[i], a[i + 1]));
+  return min;
 }
 
 export function makeRandomLayout(): BoardLayout {
   const used = new Set<number>([1, 100]);
-  const segments: [Point, Point][] = [];
+  const shapes: Point[][] = []; // accepted drawn spines
   const snakes: Transition[] = [];
   const ladders: Transition[] = [];
 
-  // reject candidates whose axis crosses or squeezes against an accepted one;
-  // relax the gap if the board gets too crowded to finish
-  const clear = (from: number, to: number, gap: number) => {
-    const a = cellCenter(from);
-    const b = cellCenter(to);
-    return segments.every(([c, d]) => segDist(a, b, c, d) >= gap);
-  };
-  const accept = (from: number, to: number) => {
-    used.add(from);
-    used.add(to);
-    segments.push([cellCenter(from), cellCenter(to)]);
-  };
+  // the real spine a candidate would be drawn with (snake curves are seeded by
+  // their endpoints, so this is exactly what would end up on the board)
+  const spineFor = (t: Transition, kind: 'snake' | 'ladder'): Point[] =>
+    kind === 'snake'
+      ? buildSnakeCurve(t).samples.filter((_, i) => i % 3 === 0)
+      : ladderSamples(buildLadderGeom(t), 6);
 
-  const fill = (count: number, make: () => Transition | null, out: Transition[]) => {
-    for (const gap of [95, 65, 38]) {
+  const fill = (count: number, make: () => Transition | null, out: Transition[], kind: 'snake' | 'ladder') => {
+    // bodies are ~24 units wide, ladders ~36: relax the breathing room between
+    // spines only if the board gets too crowded to finish
+    for (const gap of [60, 44, 34, 26]) {
       let guard = 0;
-      while (out.length < count && guard++ < 700) {
+      while (out.length < count && guard++ < 900) {
         const t = make();
         if (!t || used.has(t.from) || used.has(t.to)) continue;
         const dist = cellDistance(t.from, t.to);
         if (dist < 200 || dist > 580) continue;
-        if (!clear(t.from, t.to, gap)) continue;
-        accept(t.from, t.to);
+        const spine = spineFor(t, kind);
+        if (!shapes.every((s) => polylineDist(spine, s) >= gap)) continue;
+        used.add(t.from);
+        used.add(t.to);
+        shapes.push(spine);
         out.push(t);
       }
       if (out.length >= count) break;
@@ -256,17 +265,22 @@ export function makeRandomLayout(): BoardLayout {
     const from = 20 + Math.floor(Math.random() * 80); // 20..99
     const to = from - (12 + Math.floor(Math.random() * 33));
     return to >= 2 ? { from, to } : null;
-  }, snakes);
+  }, snakes, 'snake');
 
   fill(7, () => {
     const from = 2 + Math.floor(Math.random() * 78); // 2..79
     const to = from + 12 + Math.floor(Math.random() * 33);
     return to <= 99 ? { from, to } : null;
-  }, ladders);
+  }, ladders, 'ladder');
 
   // extremely unlikely, but never start a game with a near-empty board
   if (snakes.length < 5 || ladders.length < 4) return CLASSIC_LAYOUT;
   return makeLayout(snakes, ladders);
+}
+
+// dev hook: lets tests/console sample many random layouts (stripped from release builds)
+if (__DEV__) {
+  (globalThis as { __makeRandomLayout?: typeof makeRandomLayout }).__makeRandomLayout = makeRandomLayout;
 }
 
 export function transitionAt(cell: number, layout: BoardLayout): { kind: 'snake' | 'ladder'; to: number } | null {

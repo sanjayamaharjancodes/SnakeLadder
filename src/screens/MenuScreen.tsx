@@ -16,7 +16,8 @@ import { ChibiHero } from '../components/ChibiHero';
 import { FloatingOrbs } from '../components/Confetti';
 import { MenuSnakes } from '../components/MenuSnakes';
 import { WoodBackground } from '../components/WoodBackground';
-import { TimeSetting, WeatherSetting } from '../components/Weather';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { NightOverlay, TimeSetting, useResolvedTime, WeatherSetting } from '../components/Weather';
 import { Hero, HEROES } from '../game/heroes';
 import { theme } from '../theme';
 
@@ -94,17 +95,19 @@ function RosterHero({
 }) {
   const selected = order >= 0;
   return (
-    <View style={{ alignItems: 'center', width: 46 }}>
+    <View style={{ alignItems: 'center', width: 40 }}>
       <Pressable onPress={onToggle} disabled={full}>
         <View
           style={[
             styles.heroFace,
-            selected && { borderColor: hero.color, backgroundColor: 'rgba(233,185,73,0.16)' },
-            !selected && { opacity: full ? 0.25 : 0.55 },
+            selected && { borderColor: hero.color, backgroundColor: 'rgba(233,185,73,0.2)' },
+            full && !selected && { opacity: 0.3 },
           ]}
         >
-          <View style={{ marginTop: 6 }}>
-            <ChibiHero hero={hero} size={34} animate={false} />
+          {/* zoomed bust: the head + headgear fill the card so each hero reads
+              distinctly at a glance (body is cropped by the card) */}
+          <View style={{ marginTop: 2 }}>
+            <ChibiHero hero={hero} size={52} animate={false} />
           </View>
         </View>
       </Pressable>
@@ -125,9 +128,11 @@ function RosterHero({
 }
 
 export function MenuScreen({ onStart, initial }: Props) {
-  const [randomBoard, setRandomBoard] = useState(initial?.randomBoard ?? false);
+  const [randomBoard, setRandomBoard] = useState(initial?.randomBoard ?? true);
   const [weather, setWeather] = useState<WeatherSetting>(initial?.weather ?? 'random');
-  const [time, setTime] = useState<TimeSetting>(initial?.time ?? 'day');
+  const [time, setTime] = useState<TimeSetting>(initial?.time ?? 'auto');
+  const resolvedTime = useResolvedTime(time);
+  const insets = useSafeAreaInsets();
   // roster in turn order: tap a hero to join/leave, tap their badge to flip CPU/human
   const [slots, setSlots] = useState<PlayerSlot[]>(
     () =>
@@ -164,14 +169,18 @@ export function MenuScreen({ onStart, initial }: Props) {
       <WoodBackground />
       <FloatingOrbs count={8} />
       <MenuSnakes />
-      <View style={{ flex: 1, paddingTop: 58 }}>
+      <View style={{ flex: 1, paddingTop: insets.top + 44 }}>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', paddingHorizontal: 16 }}>
           {TITLE.split('').map((ch, i) => (
             <TitleLetter key={i} ch={ch} index={i} />
           ))}
         </View>
 
-        <ScrollView style={{ flex: 1, marginTop: 16 }} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 16 }}>
+        <ScrollView
+          style={{ flex: 1, marginTop: 16 }}
+          contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 12, flexGrow: 1 }}
+          showsVerticalScrollIndicator={false}
+        >
           {/* mode + board + weather */}
           <Animated.View entering={FadeInDown.delay(250).springify()} style={styles.card}>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -204,19 +213,21 @@ export function MenuScreen({ onStart, initial }: Props) {
             </View>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 16 }}>
               <Text style={styles.cardLabel}>WEATHER</Text>
-              <View style={{ flexDirection: 'row', gap: 6 }}>
+              <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
                 {(
                   [
                     { key: 'clear', label: '☀️' },
                     { key: 'rain', label: '🌧' },
                     { key: 'snow', label: '❄️' },
-                    { key: 'random', label: '🔀' },
                   ] as { key: WeatherSetting; label: string }[]
                 ).map((w) => (
                   <Pressable key={w.key} onPress={() => setWeather(w.key)} style={[styles.countBtn, weather === w.key && styles.countActive]}>
                     <Text style={{ fontSize: 16 }}>{w.label}</Text>
                   </Pressable>
                 ))}
+                <Pressable onPress={() => setWeather('random')} style={[styles.modeBtn, weather === 'random' && styles.modeActive]}>
+                  <Text style={[styles.modeText, weather === 'random' && { color: theme.onAccent }]}>AUTO</Text>
+                </Pressable>
               </View>
             </View>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 16 }}>
@@ -227,6 +238,9 @@ export function MenuScreen({ onStart, initial }: Props) {
                 </Pressable>
                 <Pressable onPress={() => setTime('night')} style={[styles.modeBtn, time === 'night' && styles.modeActive]}>
                   <Text style={[styles.modeText, time === 'night' && { color: theme.onAccent }]}>🌙 NIGHT</Text>
+                </Pressable>
+                <Pressable onPress={() => setTime('auto')} style={[styles.modeBtn, time === 'auto' && styles.modeActive]}>
+                  <Text style={[styles.modeText, time === 'auto' && { color: theme.onAccent }]}>🌗 AUTO</Text>
                 </Pressable>
               </View>
             </View>
@@ -240,7 +254,7 @@ export function MenuScreen({ onStart, initial }: Props) {
                 {slots.length}/{MAX_PLAYERS} PLAYERS
               </Text>
             </View>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 6, marginTop: 12 }}>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 4, marginTop: 12 }}>
               {HEROES.map((h) => {
                 const idx = slots.findIndex((s) => s.heroId === h.id);
                 return (
@@ -258,10 +272,9 @@ export function MenuScreen({ onStart, initial }: Props) {
             </View>
             <Text style={styles.rosterHint}>tap 👤/🤖 under a hero to switch player ↔ auto</Text>
           </Animated.View>
-        </ScrollView>
 
-        {/* pinned footer: play + ad slot */}
-        <View style={{ paddingHorizontal: 16, paddingBottom: 10 }}>
+          {/* directly under the roster — always visible next to the content,
+              never pushed toward a screen edge that a small window might clip */}
           <Pressable onPress={start} disabled={!canPlay} accessibilityRole="button" accessibilityLabel="Play">
             <LinearGradient
               colors={[theme.accent, theme.accentDeep]}
@@ -274,9 +287,13 @@ export function MenuScreen({ onStart, initial }: Props) {
               </Text>
             </LinearGradient>
           </Pressable>
-        </View>
+        </ScrollView>
+
         <AdBanner />
+        {/* keep the ad clear of the system navigation bar (edge-to-edge Android) */}
+        {insets.bottom > 0 && <View style={{ height: insets.bottom, backgroundColor: 'rgba(0,0,0,0.35)' }} />}
       </View>
+      {resolvedTime === 'night' && <NightOverlay />}
     </LinearGradient>
   );
 }
@@ -333,7 +350,7 @@ const styles = StyleSheet.create({
   },
   typePill: {
     marginTop: 4,
-    minWidth: 40,
+    minWidth: 36,
     paddingHorizontal: 5,
     paddingVertical: 3,
     borderRadius: 9,
@@ -353,7 +370,7 @@ const styles = StyleSheet.create({
   },
   typePillGhost: {
     marginTop: 4,
-    minWidth: 40,
+    minWidth: 36,
     paddingVertical: 3,
     borderRadius: 9,
     borderWidth: 1,
@@ -369,9 +386,9 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   heroFace: {
-    width: 44,
-    height: 56,
-    borderRadius: 12,
+    width: 38,
+    height: 50,
+    borderRadius: 11,
     borderWidth: 2,
     borderColor: theme.panelBorder,
     backgroundColor: 'rgba(255,255,255,0.06)',
@@ -379,6 +396,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   playBtn: {
+    marginTop: 14,
     paddingVertical: 14,
     borderRadius: 16,
     alignItems: 'center',
