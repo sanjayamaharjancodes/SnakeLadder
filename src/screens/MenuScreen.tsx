@@ -112,7 +112,7 @@ function RosterHero({
         </View>
       </Pressable>
       {selected ? (
-        <Pressable onPress={onToggleCpu} hitSlop={6} style={[styles.typePill, isCpu && styles.typePillCpu]}>
+        <Pressable onPress={onToggleCpu} hitSlop={8} style={[styles.typePill, isCpu && styles.typePillCpu]}>
           <Text style={styles.typePillText}>
             {isCpu ? '🤖' : '👤'}
             {order + 1}
@@ -187,7 +187,13 @@ export function MenuScreen({ onStart, initial }: Props) {
               <Text style={styles.cardLabel}>MODE</Text>
               <View style={{ flexDirection: 'row', gap: 8 }}>
                 <Pressable
-                  onPress={() => setSlots((prev) => prev.map((s, i) => ({ ...s, isCpu: i > 0 })))}
+                  // non-destructive: keeps any human/CPU mix the player set up via
+                  // the badges, only flipping the last hero when no CPU exists yet
+                  onPress={() =>
+                    setSlots((prev) =>
+                      prev.some((s) => s.isCpu) ? prev : prev.map((s, i) => ({ ...s, isCpu: i === prev.length - 1 })),
+                    )
+                  }
                   style={[styles.modeBtn, vsCpu && styles.modeActive]}
                 >
                   <Text style={[styles.modeText, vsCpu && { color: theme.onAccent }]}>🤖 VS CPU</Text>
@@ -270,7 +276,7 @@ export function MenuScreen({ onStart, initial }: Props) {
                 );
               })}
             </View>
-            <Text style={styles.rosterHint}>tap 👤/🤖 under a hero to switch player ↔ auto</Text>
+            <Text style={styles.rosterHint}>tap 👤/🤖 under a hero to switch player ↔ auto — mix freely</Text>
           </Animated.View>
 
           {/* directly under the roster — always visible next to the content,
@@ -350,10 +356,10 @@ const styles = StyleSheet.create({
   },
   typePill: {
     marginTop: 4,
-    minWidth: 36,
+    minWidth: 38,
     paddingHorizontal: 5,
-    paddingVertical: 3,
-    borderRadius: 9,
+    paddingVertical: 4,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: theme.accent,
     backgroundColor: 'rgba(233,185,73,0.22)',
@@ -365,7 +371,7 @@ const styles = StyleSheet.create({
   },
   typePillText: {
     color: theme.text,
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '800',
   },
   typePillGhost: {
