@@ -11,7 +11,7 @@ export interface Player {
 export type Phase = 'idle' | 'rolling' | 'moving' | 'won';
 
 export interface MoveStep {
-  kind: 'hop' | 'snake' | 'ladder' | 'blocked' | 'capture';
+  kind: 'hop' | 'snake' | 'ladder' | 'blocked' | 'capture' | 'locked';
   /** cells visited for hops (one entry per square stepped onto) */
   cells?: number[];
   /** snake/ladder transition target */
@@ -24,17 +24,24 @@ export interface MoveStep {
  * Pure rules resolution: given the mover's position, the dice and all players,
  * produce the ordered animation/effect steps and the final position.
  * Rules: exact landing on 100 wins; overshoot = no move; roll 6 = extra turn;
- * landing on an opponent sends them back to start.
+ * landing on an opponent sends them back to start. With the optional
+ * `sixToStart` house rule, a token at home only enters the board on a 6
+ * (the 6 moves it to square 6 and, as always, grants another roll).
  */
 export function resolveMove(
   player: Player,
   dice: number,
   players: Player[],
   layout: BoardLayout,
+  sixToStart = false,
 ): { steps: MoveStep[]; finalPos: number; extraTurn: boolean; won: boolean } {
   const steps: MoveStep[] = [];
   const start = player.pos;
   const target = start + dice;
+
+  if (sixToStart && start === 0 && dice !== 6) {
+    return { steps: [{ kind: 'locked' }], finalPos: 0, extraTurn: false, won: false };
+  }
 
   if (target > 100) {
     return { steps: [{ kind: 'blocked' }], finalPos: start, extraTurn: dice === 6, won: false };

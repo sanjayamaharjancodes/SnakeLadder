@@ -34,6 +34,8 @@ export interface GameSetup {
   weather: WeatherSetting;
   /** day or night sky during the game */
   time: TimeSetting;
+  /** house rule: a token needs a 6 to leave home */
+  sixToStart: boolean;
 }
 
 interface Props {
@@ -131,6 +133,7 @@ export function MenuScreen({ onStart, initial }: Props) {
   const [randomBoard, setRandomBoard] = useState(initial?.randomBoard ?? true);
   const [weather, setWeather] = useState<WeatherSetting>(initial?.weather ?? 'random');
   const [time, setTime] = useState<TimeSetting>(initial?.time ?? 'auto');
+  const [sixToStart, setSixToStart] = useState(initial?.sixToStart ?? false);
   const resolvedTime = useResolvedTime(time);
   const insets = useSafeAreaInsets();
   // roster in turn order: tap a hero to join/leave, tap their badge to flip CPU/human
@@ -161,7 +164,7 @@ export function MenuScreen({ onStart, initial }: Props) {
 
   const start = () => {
     if (!canPlay) return;
-    onStart({ slots, randomBoard, weather, time });
+    onStart({ slots, randomBoard, weather, time, sixToStart });
   };
 
   return (
@@ -235,6 +238,14 @@ export function MenuScreen({ onStart, initial }: Props) {
                   <Text style={[styles.modeText, weather === 'random' && { color: theme.onAccent }]}>AUTO</Text>
                 </Pressable>
               </View>
+            </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 16 }}>
+              <Text style={styles.cardLabel}>RULES</Text>
+              <Pressable onPress={() => setSixToStart((v) => !v)} style={[styles.modeBtn, sixToStart && styles.modeActive]}>
+                <Text style={[styles.modeText, sixToStart && { color: theme.onAccent }]}>
+                  🎲 6 TO START {sixToStart ? '· ON' : '· OFF'}
+                </Text>
+              </Pressable>
             </View>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 16 }}>
               <Text style={styles.cardLabel}>TIME</Text>

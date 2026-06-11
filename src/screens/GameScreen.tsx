@@ -173,7 +173,7 @@ export function GameScreen({ setup, onExit }: Props) {
     await diceRef.current?.roll(value);
     haptic('medium');
 
-    const { steps, finalPos, extraTurn, won } = resolveMove(mover, value, playersRef.current, layoutRef.current);
+    const { steps, finalPos, extraTurn, won } = resolveMove(mover, value, playersRef.current, layoutRef.current, setup.sixToStart);
     setPhaseBoth('moving');
     const token = tokenRefs.current[mover.id];
     const landed = mover.pos + value;
@@ -181,6 +181,10 @@ export function GameScreen({ setup, onExit }: Props) {
     for (const step of steps) {
       if (step.kind === 'blocked') {
         say(`Rolled ${value} — need exactly ${100 - mover.pos} to win!`);
+        haptic('error');
+        await sleep(900);
+      } else if (step.kind === 'locked') {
+        say(`${mover.name} rolled ${value} — needs a 6 to start!`);
         haptic('error');
         await sleep(900);
       } else if (step.kind === 'hop' && step.cells) {

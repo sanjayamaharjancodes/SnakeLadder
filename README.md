@@ -26,7 +26,8 @@ pawns) is drawn in code with SVG and animated with Reanimated; there are no imag
 - **Living board**: snakes wag their tails and flick their tongues while idle;
   lobby remembers your last setup
 - Classic rules: exact roll to land on 100, roll a 6 for an extra turn, land on an
-  opponent to bump them back home
+  opponent to bump them back home; optional **6-to-start** house rule (off by
+  default) — a token waits at home until its owner rolls a 6
 - Realistic warm board: parchment cells in a walnut frame, python-patterned tapered
   snakes, wooden ladders with grain and nails, wooden-plank app theme
 - Animations everywhere:
