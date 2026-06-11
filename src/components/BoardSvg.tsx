@@ -110,17 +110,18 @@ function buildOutline(pts: Point[]): Outline {
     return d + ' Z';
   };
 
+  // blotches stay on the static body only (the rear third flexes)
   for (let i = 0; i < n; i++) {
-    if (i > 2 && i < n * 0.76 && i % 5 === 0) {
+    if (i > 2 && i < n * 0.64 && i % 5 === 0) {
       const s = sect(i);
       blotches.push({ p: pts[i], angle: s.angle, w: s.w });
     }
   }
 
-  // tail = last ~18% of the spine. The animated tail BENDS: each sample is
+  // tail = last ~30% of the spine. The animated tail BENDS: each sample is
   // displaced along its perpendicular by a factor that ramps from 0 at the
   // body junction to 1 at the tip — flesh flexing, not a piece on a hinge.
-  const split = Math.floor(n * 0.82);
+  const split = Math.floor(n * 0.7);
   const cover = Math.min(split + 2, n - 1);
   const tailGeom: TailGeom = { x: [], y: [], px: [], py: [], w: [], f: [] };
   for (let i = split; i < n; i++) {
@@ -136,8 +137,9 @@ function buildOutline(pts: Point[]): Outline {
     tailGeom.px.push(-ty);
     tailGeom.py.push(tx);
     tailGeom.w.push(bodyWidth(i / (n - 1)));
-    // rigid while still under the body (seamless joint), then ease toward the tip
-    tailGeom.f.push(i <= cover ? 0 : Math.pow((i - cover) / Math.max(1, n - 1 - cover), 1.4));
+    // rigid while still under the body (seamless joint), then ease toward the
+    // tip — gentle exponent so the whole rear third visibly sways, not just the tip
+    tailGeom.f.push(i <= cover ? 0 : Math.pow((i - cover) / Math.max(1, n - 1 - cover), 1.15));
   }
 
   let spinePath = `M ${pts[0].x.toFixed(1)} ${pts[0].y.toFixed(1)}`;
