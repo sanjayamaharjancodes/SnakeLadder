@@ -31,7 +31,16 @@ yarn-error.*
 *.pem
 
 # local env files
+.env
 .env*.local
+
+# screenshots / playwright residue
+*.png
+*.jpg
+*.jpeg
+
+# Claude Code
+.claude/
 
 # typescript
 *.tsbuildinfo

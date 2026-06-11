@@ -1,17 +1,24 @@
 {
   "expo": {
-    "name": "SnakeLadder",
-    "slug": "SnakeLadder",
+    "name": "Snakes & Ladders",
+    "slug": "snakes-and-ladders",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#0B1026",
+    "splash": {
+      "backgroundColor": "#1a1040",
+      "resizeMode": "contain"
+    },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.smaharjan.snakesandladders"
     },
     "android": {
+      "package": "com.smaharjan.snakesandladders",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#1a1040",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
@@ -20,6 +27,9 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "plugins": [
+      "expo-status-bar"
+    ]
   }
 }
