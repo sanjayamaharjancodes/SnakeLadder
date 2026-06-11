@@ -60,11 +60,10 @@ interface Outline {
 
 function buildOutline(pts: Point[]): Outline {
   const n = pts.length;
-  const left: Point[] = [];
-  const right: Point[] = [];
   const blotches: Outline['blotches'] = [];
 
-  for (let i = 0; i < n; i++) {
+  // cross-section at sample i: perpendicular offsets scaled by the width profile
+  const sect = (i: number, scale = 1) => {
     const prev = pts[Math.max(0, i - 1)];
     const next = pts[Math.min(n - 1, i + 1)];
     let tx = next.x - prev.x;
@@ -72,29 +71,47 @@ function buildOutline(pts: Point[]): Outline {
     const tl = Math.sqrt(tx * tx + ty * ty) || 1;
     tx /= tl;
     ty /= tl;
-    const w = bodyWidth(i / (n - 1));
-    left.push({ x: pts[i].x - ty * w, y: pts[i].y + tx * w });
-    right.push({ x: pts[i].x + ty * w, y: pts[i].y - tx * w });
-    if (i > 2 && i < n * 0.76 && i % 5 === 0) {
-      blotches.push({ p: pts[i], angle: (Math.atan2(ty, tx) * 180) / Math.PI, w });
-    }
-  }
+    const w = bodyWidth(i / (n - 1)) * scale;
+    return {
+      l: { x: pts[i].x - ty * w, y: pts[i].y + tx * w },
+      r: { x: pts[i].x + ty * w, y: pts[i].y - tx * w },
+      angle: (Math.atan2(ty, tx) * 180) / Math.PI,
+      w,
+    };
+  };
 
-  const closedPath = (a: number, b: number) => {
-    let d = `M ${left[a].x.toFixed(1)} ${left[a].y.toFixed(1)}`;
-    for (let i = a + 1; i <= b; i++) d += ` L ${left[i].x.toFixed(1)} ${left[i].y.toFixed(1)}`;
-    for (let i = b; i >= a; i--) d += ` L ${right[i].x.toFixed(1)} ${right[i].y.toFixed(1)}`;
+  const closedPath = (a: number, b: number, scale: (i: number) => number) => {
+    const left: Point[] = [];
+    const right: Point[] = [];
+    for (let i = a; i <= b; i++) {
+      const s = sect(i, scale(i));
+      left.push(s.l);
+      right.push(s.r);
+    }
+    let d = `M ${left[0].x.toFixed(1)} ${left[0].y.toFixed(1)}`;
+    for (let i = 1; i < left.length; i++) d += ` L ${left[i].x.toFixed(1)} ${left[i].y.toFixed(1)}`;
+    for (let i = right.length - 1; i >= 0; i--) d += ` L ${right[i].x.toFixed(1)} ${right[i].y.toFixed(1)}`;
     return d + ' Z';
   };
 
-  // tail = last ~18% of the spine, overlapping the body by a couple samples to hide the seam
+  for (let i = 0; i < n; i++) {
+    if (i > 2 && i < n * 0.76 && i % 5 === 0) {
+      const s = sect(i);
+      blotches.push({ p: pts[i], angle: s.angle, w: s.w });
+    }
+  }
+
+  // tail = last ~18% of the spine. It pivots at the EDGE of the body overlap so
+  // the visible seam never opens, and its hidden under-body samples are slimmed
+  // so they cannot peek out sideways while swinging.
   const split = Math.floor(n * 0.82);
+  const cover = Math.min(split + 2, n - 1);
   let spinePath = `M ${pts[0].x.toFixed(1)} ${pts[0].y.toFixed(1)}`;
   for (let i = 1; i <= split; i++) spinePath += ` L ${pts[i].x.toFixed(1)} ${pts[i].y.toFixed(1)}`;
   return {
-    bodyPath: closedPath(0, split + 2),
-    tailPath: closedPath(split, n - 1),
-    tailPivot: pts[split],
+    bodyPath: closedPath(0, cover, () => 1),
+    tailPath: closedPath(split, n - 1, (i) => (i >= cover ? 1 : i === split ? 0.55 : 0.8)),
+    tailPivot: pts[cover],
     spinePath,
     blotches,
     spine: pts,
